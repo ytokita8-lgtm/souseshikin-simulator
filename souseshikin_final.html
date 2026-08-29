@@ -282,7 +282,7 @@ function buildDefault(){
 }
 /* ========== Supabase 設定（ここだけ触ればOK） ========== */
 const SUPABASE_URL  = "https://jbtqoipdsfebbfuwsktv.supabase.co";
-const SUPABASE_ANON = "";   // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlidHFvaXBkc2ZlYmJmdXdza3R2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NDgzNTUsImV4cCI6MjA1MDUyNDM1NX0.zXqrr_nu2uRnnYz-vFG3rpWMwGveDFhTPyWX7aiTXS8
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlidHFvaXBkc2ZlYmJmdXdza3R2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NDgzNTUsImV4cCI6MjA1MDUyNDM1NX0.zXqrr_nu2uRnnYz-vFG3rpWMwGveDFhTPyWX7aiTXS8";   // 既存アプリと同じ公開anonキーを貼り付け
 const TABLE = "shiharai_state";               // 事前にSQLで作成（下記手順）
 const ROW_ID = 1;                             // 単一行に全データを保存
 const CONFIGURED = SUPABASE_ANON && !SUPABASE_ANON.startsWith("__");
