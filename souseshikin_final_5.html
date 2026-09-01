@@ -1,0 +1,935 @@
+<title>創世建設 資金繰り（クラウド共有）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --ground:#eef1f5; --surface:#ffffff; --surface-2:#f6f8fb; --ink:#1a2431; --muted:#5b6675; --faint:#8b96a6;
+  --line:#dde3ec; --line-2:#e9edf3; --accent:#1f5c8b; --accent-2:#2f7fb8; --accent-soft:#dbe8f3; --warn:#c47a12; --warn-soft:#f6e6c8;
+  --pay:#3f83bd; --pay-peak:#c47a12; --in:#2e9c6d; --in-soft:#d7efe3; --bal:#7a5cc0; --danger:#c0392b; --danger-soft:#f7dcd7;
+  --shadow:0 1px 2px rgba(20,35,55,.06),0 6px 20px rgba(20,35,55,.06);
+}
+:root:not([data-theme="light"]){ @media (prefers-color-scheme:dark){
+  --ground:#0f141b; --surface:#161d27; --surface-2:#1b232f; --ink:#e7ecf3; --muted:#9aa6b5; --faint:#6b7686;
+  --line:#28323f; --line-2:#222b37; --accent:#5aa0d6; --accent-2:#7bb8e4; --accent-soft:#1d2c3b; --warn:#e0a33f; --warn-soft:#3a2f19;
+  --pay:#4d95cf; --pay-peak:#e0a33f; --in:#43b385; --in-soft:#193026; --bal:#a389e0; --danger:#e0685a; --danger-soft:#3a201d;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  --ground:#0f141b; --surface:#161d27; --surface-2:#1b232f; --ink:#e7ecf3; --muted:#9aa6b5; --faint:#6b7686;
+  --line:#28323f; --line-2:#222b37; --accent:#5aa0d6; --accent-2:#7bb8e4; --accent-soft:#1d2c3b; --warn:#e0a33f; --warn-soft:#3a2f19;
+  --pay:#4d95cf; --pay-peak:#e0a33f; --in:#43b385; --in-soft:#193026; --bal:#a389e0; --danger:#e0685a; --danger-soft:#3a201d;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box} html,body{margin:0;padding:0}
+body{background:var(--ground); color:var(--ink); font-family:"Noto Sans JP",system-ui,sans-serif; font-size:15px; line-height:1.6; -webkit-text-size-adjust:100%}
+.wrap{max-width:1140px; margin:0 auto; padding:22px 16px 90px}
+.num{font-family:"JetBrains Mono","Noto Sans JP",monospace; font-variant-numeric:tabular-nums}
+header.top{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:6px}
+.eyebrow{font-size:12px; letter-spacing:.14em; color:var(--accent); font-weight:700; text-transform:uppercase; margin:0 0 6px}
+h1{font-family:"Zen Kaku Gothic New",sans-serif; font-weight:900; font-size:clamp(22px,4.4vw,30px); margin:0; line-height:1.2; text-wrap:balance}
+.sub{color:var(--muted); font-size:13.5px; margin:8px 0 0; max-width:66ch}
+.theme-btn{border:1px solid var(--line); background:var(--surface); color:var(--muted); border-radius:9px; padding:8px 12px; font-size:13px; cursor:pointer; font-family:inherit; white-space:nowrap}
+.theme-btn:hover{color:var(--ink); border-color:var(--accent)}
+/* save bar */
+.savebar{position:sticky; top:0; z-index:20; margin:14px 0 2px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:11px 14px; box-shadow:var(--shadow)}
+.savebar .st{font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:7px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--in)}
+.dot.dirty{background:var(--warn)} .dot.ro{background:var(--faint)}
+.savebar .grow{flex:1}
+.btn{border:1px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit; font-size:13px; font-weight:600; padding:9px 14px; border-radius:10px; cursor:pointer}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn.primary{background:var(--accent); color:#fff; border-color:var(--accent)} .btn.primary:hover{background:var(--accent-2); color:#fff}
+.btn.primary:disabled{opacity:.5; cursor:default; background:var(--accent)}
+.btn[disabled]{opacity:.5; cursor:default}
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:18px}
+.block{margin-top:16px}
+.panel-h{font-family:"Zen Kaku Gothic New",sans-serif; font-weight:700; font-size:15px; margin:0 0 2px; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.panel-h .tag{font-size:11px; font-weight:700; color:var(--accent); background:var(--accent-soft); padding:2px 8px; border-radius:20px; letter-spacing:.04em}
+.panel-h .tag.real{color:var(--in); background:var(--in-soft)}
+.panel-note{color:var(--faint); font-size:12.5px; margin:2px 0 14px}
+.controls{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px}
+.ctl label{display:block; font-size:12.5px; color:var(--muted); font-weight:500; margin-bottom:7px}
+.ctl label b{color:var(--ink); font-weight:700}
+input[type=range]{width:100%; accent-color:var(--accent); margin:4px 0}
+.rangeval{font-weight:700; color:var(--accent)}
+.hint{font-size:11.5px;color:var(--faint)}
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px}
+.kpi{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 15px; box-shadow:var(--shadow)}
+.kpi .k-l{font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:.03em}
+.kpi .k-v{font-family:"JetBrains Mono",monospace; font-weight:700; font-size:22px; margin-top:6px; line-height:1.1; letter-spacing:-.01em}
+.kpi .k-s{font-size:11.5px; color:var(--faint); margin-top:3px}
+.kpi.peak{border-color:var(--warn)} .kpi.peak .k-v{color:var(--warn)}
+.kpi.min .k-v{color:var(--bal)}
+.kpi.danger{border-color:var(--danger); background:linear-gradient(180deg,var(--danger-soft),var(--surface) 60%)} .kpi.danger .k-v{color:var(--danger)}
+.chart-scroll{overflow-x:auto; padding-bottom:6px} .chart{position:relative}
+#gantt svg{margin-top:2px} .gbar{cursor:grab} .gbar:active{cursor:grabbing} .gbar:hover{opacity:1!important}
+.grow{flex:1}
+.legend .leg{cursor:pointer; user-select:none; border-radius:6px; padding:1px 4px}
+.legend .leg:hover{background:var(--surface-2)}
+.legend .leg.legoff{opacity:.4; text-decoration:line-through}
+svg{display:block; width:100%; height:auto}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:10px}
+.legend i{display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px}
+.legend i.line{width:16px;height:3px;border-radius:2px}
+.tip{position:absolute; pointer-events:none; background:var(--ink); color:var(--ground); border-radius:9px; padding:9px 11px; font-size:12px; line-height:1.55; box-shadow:0 8px 24px rgba(0,0,0,.28); opacity:0; transition:opacity .12s; z-index:5; max-width:250px; transform:translate(-50%,-100%)}
+.tip b{color:var(--surface)} .tip .r{display:flex; justify-content:space-between; gap:14px} .tip .r span:last-child{font-family:"JetBrains Mono",monospace}
+.tbl-scroll{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:13px}
+th,td{padding:9px 10px; text-align:right; border-bottom:1px solid var(--line-2); white-space:nowrap}
+th{color:var(--muted); font-weight:600; font-size:11.5px; letter-spacing:.03em}
+th.l,td.l{text-align:left}
+tbody tr:hover{background:var(--surface-2)}
+tfoot td{font-weight:700; border-top:2px solid var(--line); border-bottom:0; padding-top:11px}
+td .cell-in,td .cell-num,td .cell-mon{font-family:inherit; border:1px solid transparent; background:transparent; color:inherit; border-radius:6px; padding:5px 6px; width:100%; font-size:13px}
+td .cell-num,td .cell-mon{text-align:right; font-family:"JetBrains Mono",monospace}
+td .cell-in{text-align:left; min-width:130px}
+td .cell-in:hover,td .cell-num:hover,td .cell-mon:hover{border-color:var(--line)}
+td .cell-in:focus,td .cell-num:focus,td .cell-mon:focus{outline:none; border-color:var(--accent); background:var(--surface-2)}
+td.mon .cell-mon{width:118px}
+.chk{width:17px; height:17px; accent-color:var(--accent); cursor:pointer}
+tr.off{opacity:.42}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:20px;background:var(--in-soft);color:var(--in);margin-left:6px}
+.selp{font-family:inherit;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:5px 6px}
+.rm{border:0; background:transparent; color:var(--faint); cursor:pointer; font-size:16px; line-height:1; padding:4px 6px; border-radius:6px}
+.rm:hover{color:var(--danger); background:var(--danger-soft)}
+.warncell{color:var(--danger); font-weight:700}
+.btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+.foot{color:var(--faint); font-size:12px; margin-top:26px; line-height:1.7; border-top:1px solid var(--line); padding-top:16px}
+.foot b{color:var(--muted)}
+.nyu-site{border:1px solid var(--line); border-radius:11px; margin-bottom:10px; overflow:hidden}
+.nyu-site>summary{padding:11px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; background:var(--surface-2); list-style:none}
+.nyu-site>summary::-webkit-details-marker{display:none}
+.nyu-site>summary .nm{font-weight:700; font-size:13.5px; display:flex; align-items:center; gap:7px}
+.nyu-site>summary .tot{font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--in); font-weight:700; text-align:right}
+.nyu-body{padding:10px 14px 14px}
+.nyu-row{display:grid; grid-template-columns:1fr 118px 150px 30px; gap:8px; align-items:center; margin-bottom:7px}
+.nyu-row .lab{font-size:12.5px}
+.nyu-row input{font-family:inherit; border:1px solid var(--line); background:var(--surface); color:inherit; border-radius:7px; padding:6px 8px; font-size:12.5px; width:100%}
+.nyu-row input.n{font-family:"JetBrains Mono",monospace; text-align:right}
+.nyu-row input:focus{outline:none; border-color:var(--accent)}
+.nyu-row .off-wrap{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); white-space:nowrap}
+.nyu-row .off-wrap input{width:56px}
+.nyu-head{display:grid; grid-template-columns:1fr 118px 150px 30px; gap:8px; font-size:11px; color:var(--faint); margin-bottom:6px; padding:0 2px}
+.nyu-head span:nth-child(2),.nyu-head span:nth-child(3){text-align:right}
+.mini{border:1px solid var(--line); background:var(--surface); color:var(--muted); border-radius:7px; font-size:12px; padding:5px 10px; cursor:pointer; font-family:inherit}
+.mini:hover{border-color:var(--accent); color:var(--accent)}
+.nyu-foot{display:flex; gap:8px; margin-top:8px}
+.dtbl input.dc{font-family:"JetBrains Mono",monospace; text-align:right; border:1px solid transparent; background:transparent; color:inherit; border-radius:5px; padding:4px 5px; width:92px; font-size:12px}
+.dtbl input.dc:hover{border-color:var(--line)} .dtbl input.dc:focus{outline:none;border-color:var(--accent);background:var(--surface-2)}
+.dtbl input.dc.z{color:var(--faint)}
+.toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:var(--ground); padding:11px 18px; border-radius:10px; font-size:13px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.3); opacity:0; transition:all .2s; z-index:50; pointer-events:none}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+.cfgbanner{margin:10px 0 0; padding:11px 14px; border-radius:11px; font-size:12.5px; line-height:1.6; background:var(--warn-soft); border:1px solid var(--warn); color:var(--ink)}
+.cfgbanner code{font-family:"JetBrains Mono",monospace; font-size:11.5px; background:var(--surface); padding:1px 5px; border-radius:5px}
+.dot.off{background:var(--danger)}
+@media (max-width:560px){ .wrap{padding:16px 11px 70px} th,td{padding:7px 7px} .kpi .k-v{font-size:19px}
+  .nyu-row,.nyu-head{grid-template-columns:1fr 84px 120px 28px} .nyu-row .off-wrap input{width:44px} .dtbl input.dc{width:72px} }
+@media print{
+  body{background:#fff!important;color:#000!important;font-size:11px;}
+  #topBar,#actionBar,.btn,button,label.btn,#cfgBanner,#ganttToggle,#ganttHint,.mini{display:none!important;}
+  .panel{box-shadow:none!important;border:1px solid #ccc!important;break-inside:avoid;}
+  canvas{max-width:100%!important;}
+  h1{font-size:18px!important;}
+  #sitesTbl{font-size:10px;}
+  .no-print{display:none!important;}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">創世建設㈱ ／ 案件管理・資金繰り</p>
+      <h1>案件管理・資金繰り</h1>
+      <p class="sub">請負契約済みの見積を工種別・入金まで実額で登録し、複数現場を重ねた業者支払い・入金・手元資金残高を試算します。金額はこの画面で直接修正でき、「保存」で全員に反映されます。</p>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <button class="theme-btn" id="themeBtn" type="button">◑ 表示切替</button>
+      <span id="verBadge" style="font-size:11px;color:var(--faint);font-family:'JetBrains Mono',monospace"></span>
+    </div>
+  </header>
+
+  <div class="savebar">
+    <span class="st"><span class="dot" id="stDot"></span><span id="stText">読み込み中…</span></span>
+    <button class="btn" id="undoBtn" type="button" disabled>↶ 戻る</button>
+    <button class="btn" id="redoBtn" type="button" disabled>↷ 進む</button>
+    <span class="grow"></span>
+    <button class="btn" id="exportBtn" type="button" title="現在のデータをJSONファイルとして保存（バックアップ）">⬇ JSON</button>
+    <label class="btn" id="importLbl" title="JSONファイルからデータを復元（インポート）" style="cursor:pointer">⬆ JSON<input type="file" id="importFile" accept=".json" style="display:none"></label>
+    <button class="btn" id="xlsxExportBtn" type="button" title="Excelファイルとしてエクスポート" style="background:var(--in);color:#fff;border-color:var(--in)">⬇ Excel</button>
+    <label class="btn" id="xlsxImportLbl" title="Excelファイルから現場を追加・更新" style="cursor:pointer;background:var(--in);color:#fff;border-color:var(--in)">⬆ Excel<input type="file" id="xlsxImportFile" accept=".xlsx,.xls" style="display:none"></label>
+    <button class="btn" id="pdfExportBtn" type="button" title="PDF印刷・出力" style="background:#e74c3c;color:#fff;border-color:#c0392b">🖨 PDF</button>
+    <button class="btn" id="revertBtn" type="button">最新に更新</button>
+    <button class="btn primary" id="saveBtn" type="button" disabled>今すぐ保存</button>
+  </div>
+  <div id="cfgBanner" class="cfgbanner" style="display:none"></div>
+
+  <div class="panel block">
+    <p class="panel-h">前提条件 <span class="tag">全体に適用</span></p>
+    <p class="panel-note">実データ現場は工種別支払・入金とも実額。売上係数は投影現場の入金計算にのみ使用。支払月シフトは締めズレを上乗せしたい時に。</p>
+    <div class="controls">
+      <div class="ctl"><label>手元資金（手入力）<b class="rangeval" id="cashLbl"></b></label>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><input type="number" id="cashNum" step="10" placeholder="例: 3000" style="width:130px;font-family:'JetBrains Mono',monospace;text-align:right;border:1.5px solid var(--accent);background:var(--surface);color:inherit;border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700"><span class="hint">万円で直接入力</span></div>
+        <input type="range" id="cashRange" min="0" max="300000000" step="1000000" value="0"><div class="hint">スライダーでも調整可</div></div>
+      <div class="ctl"><label>売上係数（投影現場のみ）<b class="rangeval" id="urLbl"></b></label>
+        <input type="range" id="urRange" min="1.00" max="1.45" step="0.005" value="1.2033"><div class="hint">税込入金÷税別発注。実データ現場には影響しません</div></div>
+      <div class="ctl"><label>支払月のシフト <b class="rangeval" id="shiftLbl">0ヶ月</b></label>
+        <input type="range" id="shiftRange" min="0" max="2" step="1" value="0"><div class="hint">見積の支払月をそのまま使用（0）</div></div>
+      <div class="ctl"><label>グラフ表示期間 <b class="rangeval" id="horizonLbl">自動</b></label>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><input type="number" id="horizonNum" min="0" max="240" step="1" placeholder="自動" style="width:100px;font-family:'JetBrains Mono',monospace;text-align:right;border:1.5px solid var(--line);background:var(--surface);color:inherit;border-radius:8px;padding:8px 10px;font-size:14px;font-weight:700"><span class="hint">ヶ月（0または空欄＝自動）</span></div>
+        <div class="hint">最初の支払い月から指定ヶ月分まで表示。将来の投影を伸ばしたい時に使用。</div></div>
+    </div>
+  </div>
+
+  <div class="kpis block" id="kpis"></div>
+
+  <div class="panel block">
+    <p class="panel-h">月次キャッシュフロー <span class="tag">支払・入金・手元資金</span></p>
+    <p class="panel-note">青＝業者支払い（税込）、緑＝お客様入金（税込）、紫線＝手元資金の累計残高（右軸）。支払い・入金とも税込で統一。残高がマイナスの月は赤で警告。棒にカーソルで内訳。</p>
+    <div class="chart-scroll">
+      <div class="chart" id="chart"><div class="tip" id="tip"></div></div>
+      <div id="gantt"></div>
+    </div>
+    <div class="legend">
+      <span class="leg" data-ser="pay"><i style="background:var(--pay)"></i>業者支払い</span><span class="leg" data-ser="inc"><i style="background:var(--in)"></i>入金</span>
+      <span class="leg" data-ser="bal"><i class="line" style="background:var(--bal)"></i>手元資金残高</span><span class="leg" data-ser="short"><i style="background:var(--danger)"></i>資金ショート</span>
+      <span class="grow" style="flex:1"></span>
+      <button class="mini" id="ganttToggle" type="button">工程を隠す</button>
+    </div>
+    <div class="hint" id="ganttHint" style="margin-top:6px">下は各現場の工程（着工〜完工）です。バーを<b>左右にドラッグ</b>すると着工月が動き、支払い・入金も連動してずれます。クリックで工期を上のグラフに重ねて表示（もう一度で解除）。投影現場の<b>工期（ヶ月）</b>は現場一覧のプロファイル欄で変更できます。</div>
+  </div>
+
+  <div class="panel block">
+    <p class="panel-h">現場一覧 <span class="tag" id="siteCount"></span></p>
+    <p class="panel-note">現場名・着工月・発注額（投影のみ）・契約金額（税込）を直接編集。契約金額を変えると入金3回に今の比率のまま自動配分されます（回数・比率・時期の微調整は下の「入金スケジュール」）。実データ現場の工種別金額は「工種別 支払明細」で修正できます。</p>
+    <div class="tbl-scroll">
+      <table id="sitesTbl">
+        <thead><tr><th style="width:26px"></th><th style="width:34px"></th><th class="l">現場名</th><th>発注額(万円)</th><th class="l">着工月</th><th class="l">支払プロファイル</th><th>契約金額 税込(万円)</th><th style="width:34px"></th></tr></thead>
+        <tbody id="sitesBody"></tbody>
+        <tfoot><tr><td></td><td class="l">合計</td><td class="num" id="sumCost"></td><td></td><td></td><td class="num" id="sumIn"></td><td></td></tr></tfoot>
+      </table>
+    </div>
+    <div class="btns"><button class="btn primary" id="addBtn" type="button">＋ 投影現場を追加</button><button class="btn" id="resetBtn" type="button">初期データに戻す</button></div>
+  </div>
+
+  <div class="panel block">
+    <p class="panel-h">入金スケジュール（手入力）<span class="tag">現場ごとに調整</span></p>
+    <p class="panel-note">各現場の入金の金額（税込・万円）とタイミング（着工から何ヶ月後か）を直接編集。回の追加・削除も可能。</p>
+    <div id="nyuWrap"></div>
+  </div>
+
+  <div class="panel block">
+    <p class="panel-h">工種別 支払明細 <span class="tag real">実額・編集可</span></p>
+    <p class="panel-note">各業者へ支払う月と金額（単位＝円・<b>税別で入力</b>）。グラフ・月次明細ではここに消費税10%を上乗せした<b>税込金額</b>で計算されます。セルを直接修正でき、発注額は月合計に自動連動します。</p>
+    <div id="drillWrap"></div>
+  </div>
+
+  <div class="panel block">
+    <p class="panel-h">月別 資金繰り明細</p>
+    <p class="panel-note">支払・入金・当月収支・手元資金残高。残高がマイナスの月は資金ショートです。</p>
+    <div class="tbl-scroll">
+      <table id="monTbl"><thead><tr><th class="l">月</th><th>業者支払(税込)</th><th>入金(税込)</th><th>当月収支</th><th>手元資金残高</th><th class="l">状態</th></tr></thead><tbody id="monBody"></tbody></table>
+    </div>
+  </div>
+
+  <p class="foot">
+    <b>保存と共有</b>：内容はクラウド（Supabase）に自動保存され、このURLを開いている全員に共有されます。編集は自動保存（数秒後）＋「今すぐ保存」。他の人が保存すると自動で最新に更新されます。URLを知っている人は誰でも閲覧・編集できます。<br>
+    <b>データの入れ方</b>：請負契約済みの見積Excel（工程・支払表＋実行台帳＋③入金スケジュール）を送っていただければ、工種別の実額でこの画面に追加します。<b>試算の前提</b>：手形・立替・値引・保留金は未反映。業者支払いは工種別明細の税別金額×1.10（税込換算）で計算。手元資金残高は税込入金−税込支払の累計。
+  </p>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   バージョン管理・更新ガイド
+   ============================================================
+   VERSION を変えるだけで画面右上に表示されます。
+   更新手順：
+     1. HTML を編集（現場データ追加、UI修正など）
+     2. VERSION の日付を更新
+     3. GitHub にプッシュ → GitHub Pages が自動デプロイ
+     4. Supabase のデータは独立して残るため、UI更新だけなら
+        画面を開き直せば即反映されます。
+   スキーマ変更（DATAの構造を変える）時の手順：
+     a. エクスポートボタンでデータをJSON保存（バックアップ）
+     b. migrateData()に移行ロジックを追記
+     c. GitHubにプッシュ → 自動で既存データを新形式に変換
+   ============================================================ */
+const VERSION = "v2.1  2026-08-28";
+
+/* ---------- 既定データ（初回シード） ---------- */
+const NAGAMACHI_TRADES=[["仮設工事",[651552, 651552, 651552, 651552, 651552, 651552]],["基礎・土間工事",[4465696, 4465696, 0, 0, 0, 0]],["木工事（構造）",[0, 0, 2805000, 0, 0, 0]],["木材",[0, 0, 5047167, 5047167, 5047167, 0]],["建材・構造強化",[0, 0, 266245, 266245, 0, 0]],["電気設備（換気）",[0, 0, 0, 0, 186798, 186798]],["電気設備（一般）",[0, 0, 0, 2406667, 2406667, 2406667]],["給排水工事",[0, 0, 0, 3525667, 3525667, 3525667]],["住設機器",[0, 0, 0, 0, 2962300, 2962300]],["断熱部材",[0, 0, 0, 0, 815693, 815693]],["木工事（仕上）",[0, 0, 0, 1814517, 1814517, 1814517]],["天井・壁・床",[0, 0, 0, 3272217, 3272217, 3272217]],["階段・造作材",[0, 0, 0, 0, 220601, 220601]],["建具",[0, 0, 0, 0, 1618602, 1618602]],["収納・造付家具",[0, 0, 0, 0, 779853, 779853]],["住宅設備機器",[0, 0, 0, 0, 5709168, 5709168]],["照明器具",[0, 0, 0, 0, 703970, 703970]],["塗装工事",[0, 0, 0, 0, 0, 200000]],["硝子・アクリル",[0, 0, 0, 0, 0, 2600000]],["エアコン工事",[0, 0, 0, 0, 0, 1851600]],["鉄骨階段",[0, 0, 0, 0, 1400000, 0]],["屋根工事",[0, 0, 0, 2846900, 0, 0]],["外壁工事",[0, 0, 0, 0, 3467845, 3467845]],["防水工事",[0, 0, 0, 0, 911000, 911000]],["外部建具",[0, 0, 0, 0, 4742464, 4742464]],["その他外装",[0, 0, 0, 0, 920388, 920388]],["外構工事",[0, 0, 0, 0, 1780000, 1780000]],["予備費",[0, 0, 0, 0, 0, 2948634]]];
+const TAGAJO_TRADES=[["仮設工事",[391654,391654,391654,391654,391654,391654,391654]],["基礎・土間工事",[3001000,3001000,0,0,0,0,0]],["木工事（構造）",[0,0,1400000,0,0,0,0]],["木材",[0,0,2929116,2929116,2929116,0,0]],["建材・構造強化",[0,0,149425,149425,0,0,0]],["電気設備（換気）",[0,0,0,0,0,111388,111388]],["電気設備（一般）",[0,0,0,736111,736111,736111,736111]],["給排水工事",[0,0,0,1192500,1192500,1192500,1192500]],["住設機器",[0,0,0,0,0,820960,820960]],["断熱部材",[0,0,0,0,488900,488900,0]],["木工事（仕上）",[0,0,0,0,1330000,1330000,1330000]],["天井・壁・床",[0,0,0,0,1848815,1848815,1848815]],["階段・造作材",[0,0,0,0,0,123292,123292]],["建具",[0,0,0,0,0,1341873,1341873]],["収納・造付家具",[0,0,0,0,0,388768,388768]],["住宅設備機器",[0,0,0,0,0,2630340,2630340]],["照明器具",[0,0,0,0,0,380000,380000]],["エアコン工事",[0,0,0,0,0,0,944000]],["鉄骨階段",[0,0,0,0,1080000,0,0]],["屋根工事",[0,0,0,2083970,0,0,0]],["外壁工事",[0,0,0,0,849171,849171,849171]],["防水工事",[0,0,0,0,0,188020,188020]],["外部建具",[0,0,0,0,0,1781568,1781568]],["その他外装",[0,0,0,0,0,458950,458950]],["外構工事",[0,0,0,0,0,2579927,2579927]],["予備費",[0,0,0,0,0,0,2496140]]];
+const NAKADA5_TRADES=[["仮設工事",[392260,392260,392260,392260,392260]],["基礎・土間工事",[1282000,1282000,0,0,0]],["木工事（構造）",[0,0,1470000,0,0]],["木材",[0,0,968540,968540,968540]],["建材・構造強化",[0,0,65140,65140,0]],["電気設備（換気）",[0,0,0,43046,43046]],["電気設備（一般）",[0,0,0,575000,575000]],["給排水工事",[0,0,0,1185000,1185000]],["住設機器",[0,0,0,235940,235940]],["断熱部材",[0,0,0,0,281000]],["木工事（仕上）",[0,0,316667,316667,316667]],["天井・壁・床",[0,0,702002,702002,702002]],["階段・造作材",[0,0,0,22586,22586]],["建具",[0,0,0,30213,30213]],["収納・造付家具",[0,0,0,6500,6500]],["住宅設備機器",[0,0,0,140000,140000]],["照明器具",[0,0,0,108970,108970]],["塗装工事",[0,0,0,0,200000]],["エアコン工事",[0,0,0,0,236000]],["鉄骨階段",[0,0,0,0,1400000]],["屋根工事",[0,0,0,2124072,0]],["外壁工事",[0,0,0,0,1715683]],["防水工事",[0,0,0,29400,29400]],["外部建具",[0,0,0,2006990,2006990]],["その他外装",[0,0,0,156465,156465]],["外構工事",[0,0,0,245025,245025]],["予備費",[0,0,0,0,4126998]]];
+const KUROMATSU_TRADES=[["仮設工事",[448846,448846,448846,448846,448846,448846]],["基礎・土間工事",[4530000,4530000,0,0,0,0]],["木工事（構造）",[0,0,1605000,0,0,0]],["木材",[0,0,2743767,2743767,2743767,0]],["建材・構造強化",[0,0,159920,159920,0,0]],["電気設備（換気）",[0,0,0,0,110648,110648]],["電気設備（一般）",[0,0,0,1106667,1106667,1106667]],["給排水工事",[0,0,0,2013333,2013333,2013333]],["住設機器",[0,0,0,0,807960,807960]],["断熱部材",[0,0,0,0,355250,355250]],["木工事（仕上）",[0,0,0,1061667,1061667,1061667]],["天井・壁・床",[0,0,0,1552010,1552010,1552010]],["階段・造作材",[0,0,0,0,109627,109627]],["建具",[0,0,0,0,911720,911720]],["収納・造付家具",[0,0,0,0,438708,438708]],["住宅設備機器",[0,0,0,0,3137208,3137208]],["照明器具",[0,0,0,0,345980,345980]],["塗装工事",[0,0,0,0,0,200000]],["エアコン工事",[0,0,0,0,0,1103800]],["鉄骨階段",[0,0,0,0,270000,0]],["屋根工事",[0,0,0,1627325,0,0]],["外壁工事",[0,0,0,0,1969921,1969921]],["防水工事",[0,0,0,0,417100,417100]],["外部建具",[0,0,0,0,1736278,1736278]],["その他外装",[0,0,0,0,584260,584260]],["外構工事",[0,0,0,0,1903600,1903600]],["予備費",[0,0,0,0,0,2811638]]];
+const mkTrades=arr=>arr.map(([n,m])=>({n,m:m.slice(),a:m.reduce((x,y)=>x+y,0)}));
+const PROJ=[["荒井二丁目アパート",98000000,"2026-08"],["三神峰物件",89000000,"2026-11"],["中田四丁目アパート",78000000,"2026-12"]];
+const PROFILES={naga:[0.03943,0.03943,0.06746,0.16169,0.34115,0.35084],flat:[1/6,1/6,1/6,1/6,1/6,1/6],
+  bell:(()=>{const w=[];let s=0;for(let i=0;i<6;i++){const v=Math.sin(Math.PI*(i+0.5)/6);w.push(v);s+=v;}return w.map(v=>v/s);})()};
+const PROF_LABEL={naga:"長町型",flat:"均等",bell:"山形"};
+const NAGA_BASE=[0.03943,0.03943,0.06746,0.16169,0.34115,0.35084];
+function profArr(kind,N){ N=Math.max(1,Math.round(Number(N)||6));
+  if(kind==="flat") return Array(N).fill(1/N);
+  if(kind==="bell"){let w=[],s=0;for(let i=0;i<N;i++){const v=Math.sin(Math.PI*(i+0.5)/N);w.push(v);s+=v;}return w.map(v=>v/s);}
+  if(N===6) return NAGA_BASE.slice();
+  const w=[];let s=0; for(let i=0;i<N;i++){const t=N===1?0:i/(N-1)*(NAGA_BASE.length-1);const lo=Math.floor(t),hi=Math.min(NAGA_BASE.length-1,lo+1),f=t-lo;const v=NAGA_BASE[lo]*(1-f)+NAGA_BASE[hi]*f;w.push(v);s+=v;} return w.map(v=>v/s);
+}
+const NYU_PCT=[0.40,0.30,0.30],NYU_OFF=[0,2,5],NYU_LABELS=["第1回 着工","第2回 建て方完了","第3回 完工"];
+function defaultNyu(cost,ur){const tot=cost*ur;return NYU_PCT.map((p,j)=>({label:NYU_LABELS[j],amt:Math.round(tot*p),off:NYU_OFF[j]}));}
+function buildDefault(){
+  return {cash:0,ur:1.2033,shift:0,horizon:0,sites:[
+    {kind:"real",on:true,name:"長町二丁目アパート",ym:"2026-09",months:6,trades:mkTrades(NAGAMACHI_TRADES),
+      nyu:[{label:"第1回 着工",amt:45224858,off:0},{label:"第2回 建て方完了",amt:60299810,off:2},{label:"第3回 完工",amt:45224858,off:5}],nyuManual:false},
+    {kind:"real",on:true,name:"多賀城新田AP",ym:"2026-06",months:7,trades:mkTrades(TAGAJO_TRADES),
+      nyu:[{label:"第1回 着工",amt:26512499,off:0},{label:"第2回 建て方完了",amt:26512499,off:2},{label:"第3回 完工",amt:35349999,off:6}],nyuManual:false},
+    {kind:"real",on:true,name:"中田五丁目アパート",ym:"2026-09",months:5,trades:mkTrades(NAKADA5_TRADES),
+      nyu:[{label:"第1回 着工",amt:20538488,off:0},{label:"第2回 建て方完了",amt:12323093,off:2},{label:"第3回 完工",amt:8215395,off:4}],nyuManual:false},
+    {kind:"real",on:true,name:"黒松共同住宅",ym:"2026-10",months:6,trades:mkTrades(KUROMATSU_TRADES),
+      nyu:[{label:"第1回 着工",amt:22503252,off:0},{label:"第2回 建て方完了",amt:30004336,off:2},{label:"第3回 完工",amt:22503252,off:5}],nyuManual:false},
+    ...PROJ.map(([name,cost,ym])=>{const s={kind:"proj",on:true,name,cost,ym,prof:"naga",months:6,nyuManual:false};s.nyu=defaultNyu(cost,1.2033);return s;})
+  ]};
+}
+/* ========== Supabase 設定（ここだけ触ればOK） ========== */
+const SUPABASE_URL  = "https://jbtqoipdsfebbfuwsktv.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpidHFvaXBkc2ZlYmJmdXdza3R2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4MjI2NzksImV4cCI6MjA5NjM5ODY3OX0.zXqrr_nu2uRnnYz-vFG3rpWVwGveDFhTPyWX7aiTXS8";   // 既存アプリと同じ公開anonキーを貼り付け
+const TABLE = "shiharai_state";               // 事前にSQLで作成（下記手順）
+const ROW_ID = 1;                             // 単一行に全データを保存
+const CONFIGURED = SUPABASE_ANON && !SUPABASE_ANON.startsWith("__");
+/* ===================================================== */
+
+/* ---------- 状態 ---------- */
+let DATA = buildDefault();
+let dirty=false, offline=false, saving=false, loading=true;
+let remoteUpdatedAt=null;         // 最後に取り込んだサーバ更新時刻
+let autosaveT=null,autosaveMaxT=null;
+/* 進む/戻る（Undo/Redo）履歴 */
+let undoStack=[], redoStack=[], curSnap=null, histT=null;
+const clone=a=>a.map(x=>({...x}));
+const TAX=1.10; // 消費税率（支払いを税込換算するために使用）
+const siteCost=s=>s.kind==="real"?s.trades.reduce((a,t)=>a+t.a,0):(Number(s.cost)||0);
+const siteNyu=s=>(s.nyu||[]).reduce((a,x)=>a+(Number(x.amt)||0),0);
+const siteSpan=s=>{const st=ymToIdx(s.ym)+DATA.shift; return [st, st+(Number(s.months)||6)-1];};
+let focusIdx=null, ganttOpen=true, dragG=null, suppressClick=false;
+const show={pay:true,inc:true,bal:true,short:true};
+function autoNyu(s){ if(!s.nyuManual) s.nyu=defaultNyu(siteCost(s),DATA.ur); }
+/* 契約金額（税込）を手入力→現在の比率のまま入金各回へ配分 */
+function setContract(s,total){
+  total=Math.max(0,Math.round(total));
+  if(!s.nyu||!s.nyu.length){ s.nyu=[{label:"契約金額",amt:total,off:0}]; s.nyuManual=true; return; }
+  const n=s.nyu.length, cur=siteNyu(s); let acc=0;
+  s.nyu.forEach((x,i)=>{ if(i<n-1){ x.amt=cur>0?Math.round((Number(x.amt)||0)*total/cur):Math.round(total/n); acc+=x.amt; } });
+  s.nyu[n-1].amt=Math.max(0,total-acc);
+  s.nyuManual=true;
+}
+
+const fmt=n=>Math.round(n).toLocaleString("ja-JP");
+const man=n=>fmt(n/10000);
+const manU=n=>fmt(n/10000)+"万円";
+const oku=n=>Math.abs(n)>=1e8?(n/1e8).toFixed(2).replace(/\.?0+$/,"")+"億円":manU(n);
+const ymToIdx=ym=>{const[y,m]=ym.split("-").map(Number);return y*12+(m-1)};
+const idxToYm=i=>{const y=Math.floor(i/12),m=i%12+1;return{y,m,label:`${y}/${String(m).padStart(2,"0")}`,ym:`${y}-${String(m).padStart(2,"0")}`}};
+const $=s=>document.querySelector(s);
+
+/* ---------- 計算 ---------- */
+function compute(){
+  const pay={},inc={}; let minI=Infinity,maxI=-Infinity,sumCost=0,sumIn=0;
+  DATA.sites.forEach(s=>{
+    if(!s.on) return;
+    const start=ymToIdx(s.ym); sumCost+=siteCost(s); sumIn+=siteNyu(s);
+    if(s.kind==="real"){ s.trades.forEach(t=>t.m.forEach((v,i)=>{ if(v){const k=start+i+DATA.shift; pay[k]=(pay[k]||0)+v*TAX; minI=Math.min(minI,k);maxI=Math.max(maxI,k);} })); }
+    else { profArr(s.prof,s.months).forEach((r,i)=>{ const v=siteCost(s)*TAX*r; if(v){const k=start+i+DATA.shift; pay[k]=(pay[k]||0)+v; minI=Math.min(minI,k);maxI=Math.max(maxI,k);} }); }
+    (s.nyu||[]).forEach(x=>{ const v=Number(x.amt)||0; if(!v)return; const k=start+(Number(x.off)||0); inc[k]=(inc[k]||0)+v; minI=Math.min(minI,k);maxI=Math.max(maxI,k); });
+  });
+  const months=[];
+  if(minI!==Infinity){
+    const h=Number(DATA.horizon)||0; if(h>0) maxI=Math.max(maxI,minI+h-1);
+    let bal=DATA.cash; for(let i=minI;i<=maxI;i++){const p=pay[i]||0,n=inc[i]||0,net=n-p;bal+=net;months.push({idx:i,...idxToYm(i),pay:p,inc:n,net,bal});} }
+  const peakPay=Math.max(0,...months.map(m=>m.pay));
+  const minBal=months.length?Math.min(...months.map(m=>m.bal)):DATA.cash;
+  const minBalM=months.find(m=>m.bal===minBal);
+  return {months,peakPay,minBal,minBalM,sumCost,sumIn,active:DATA.sites.filter(s=>s.on).length};
+}
+
+/* ---------- 描画 ---------- */
+function renderKPIs(c){
+  const short=c.minBal<0, peakM=c.months.find(m=>m.pay===c.peakPay&&c.peakPay>0);
+  $("#kpis").innerHTML=`
+    <div class="kpi"><div class="k-l">対象現場数</div><div class="k-v">${c.active}<span style="font-size:13px">現場</span></div><div class="k-s">発注額(税別)計 ${oku(c.sumCost)}</div></div>
+    <div class="kpi peak"><div class="k-l">支払ピーク月(税込)</div><div class="k-v">${c.peakPay?man(c.peakPay):"—"}<span style="font-size:12px">万</span></div><div class="k-s">${peakM?peakM.label+" が最大":"—"}</div></div>
+    <div class="kpi"><div class="k-l">入金総額(税込)</div><div class="k-v">${oku(c.sumIn)}</div><div class="k-s">発注(税込)比 ×${(c.sumIn/(c.sumCost*TAX)||0).toFixed(2)}</div></div>`;
+}
+function renderChart(c){
+  const chart=$("#chart"),tip=$("#tip"),data=c.months;
+  chart.querySelectorAll("svg").forEach(e=>e.remove());
+  if(!data.length){ chart.insertAdjacentHTML("afterbegin",'<svg viewBox="0 0 600 120"><text x="300" y="64" text-anchor="middle" fill="#8b96a6" font-size="14">対象現場がありません</text></svg>'); return; }
+  const W=Math.max(data.length*54+70,640),H=330,padL=56,padR=54,padT=16,padB=40,plotW=W-padL-padR,plotH=H-padT-padB;
+  const barMax=Math.max(1,...data.map(m=>Math.max(show.pay?m.pay:0,show.inc?m.inc:0)))*1.12;
+  const step=plotW/data.length,gw=Math.min(19,step*0.30);
+  const yL=v=>padT+plotH-(v/barMax)*plotH;
+  let grid="";for(let t=0;t<=4;t++){const val=barMax*t/4,yy=yL(val);grid+=`<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="var(--line-2)"/><text x="${padL-7}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="9.5" fill="var(--faint)" font-family="JetBrains Mono">${fmt(val/10000)}</text>`;}
+  let bars="",labels="";
+  data.forEach((m,i)=>{const cx=padL+step*i+step/2,isPeak=m.pay===c.peakPay&&c.peakPay>0,hp=(m.pay/barMax)*plotH,hi=(m.inc/barMax)*plotH;
+    if(show.pay&&m.pay>0)bars+=`<rect class="bar" data-i="${i}" x="${(cx-gw-1).toFixed(1)}" y="${yL(m.pay).toFixed(1)}" width="${gw}" height="${hp.toFixed(1)}" rx="2.5" fill="${isPeak?'var(--pay-peak)':'var(--pay)'}"/>`;
+    if(show.inc&&m.inc>0)bars+=`<rect class="bar" data-i="${i}" x="${(cx+1).toFixed(1)}" y="${yL(m.inc).toFixed(1)}" width="${gw}" height="${hi.toFixed(1)}" rx="2.5" fill="var(--in)"/>`;
+    const se=data.length>16?2:1; if(i%se===0)labels+=`<text x="${cx.toFixed(1)}" y="${(H-padB+15).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="var(--muted)" font-family="JetBrains Mono">${m.label}</text>`;});
+  let balSvg="",rgrid="",zero="",rlabel="";
+  if(show.bal){
+    const balMax=Math.max(0,...data.map(m=>m.bal)),balMin=Math.min(0,...data.map(m=>m.bal));
+    const balPad=(balMax-balMin)*0.1||1,bTop=balMax+balPad,bBot=balMin-balPad;
+    const yR=v=>padT+plotH-((v-bBot)/(bTop-bBot))*plotH;
+    [bBot,(bBot+bTop)/2,bTop].forEach(val=>{const yy=yR(val);rgrid+=`<text x="${W-padR+7}" y="${(yy+4).toFixed(1)}" text-anchor="start" font-size="9.5" fill="var(--bal)" font-family="JetBrains Mono">${fmt(val/10000)}</text>`;});
+    if(show.short&&bBot<0&&bTop>0){const yz=yR(0);zero=`<line x1="${padL}" y1="${yz.toFixed(1)}" x2="${W-padR}" y2="${yz.toFixed(1)}" stroke="var(--danger)" stroke-width="1.2" stroke-dasharray="4 4"/>`;}
+    const path=data.map((m,i)=>{const cx=padL+step*i+step/2;return (i?"L":"M")+cx.toFixed(1)+" "+yR(m.bal).toFixed(1);}).join(" ");
+    const pts=data.map((m,i)=>{const cx=padL+step*i+step/2;return `<circle cx="${cx.toFixed(1)}" cy="${yR(m.bal).toFixed(1)}" r="3" fill="${(show.short&&m.bal<0)?'var(--danger)':'var(--bal)'}"/>`;}).join("");
+    balSvg=`<path d="${path}" fill="none" stroke="var(--bal)" stroke-width="2.2" stroke-linejoin="round"/>${pts}`;
+    rlabel=`<text x="${W-padR+7}" y="10" text-anchor="start" font-size="9" fill="var(--bal)">残高·万</text>`;
+  }
+  let band=""; if(focusIdx!=null&&DATA.sites[focusIdx]){const[a,b]=siteSpan(DATA.sites[focusIdx]);const d0=data[0].idx;let p1=Math.max(0,a-d0),p2=Math.min(data.length,b-d0+1);if(p2>p1){band=`<rect x="${(padL+step*p1).toFixed(1)}" y="${padT}" width="${(step*(p2-p1)).toFixed(1)}" height="${plotH}" fill="var(--accent)" opacity="0.10"/>`;}}
+  chart.insertAdjacentHTML("afterbegin",`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="月次キャッシュフロー">${band}${grid}${zero}<line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" stroke="var(--line)" stroke-width="1.5"/>${bars}${balSvg}${rgrid}${labels}<text x="${padL-7}" y="10" text-anchor="end" font-size="9" fill="var(--faint)">万円</text>${rlabel}</svg>`);
+  chart.querySelectorAll(".bar").forEach(bar=>{bar.style.cursor="pointer";
+    bar.addEventListener("mouseenter",()=>{const m=data[+bar.dataset.i];tip.innerHTML=`<b>${m.label}</b><div class="r"><span>業者支払</span><span>${fmt(m.pay)}</span></div><div class="r"><span>入金</span><span>${fmt(m.inc)}</span></div><div class="r"><span>当月収支</span><span>${m.net>=0?'+':''}${fmt(m.net)}</span></div><div class="r"><span>手元残高</span><span style="color:${m.bal<0?'#e0685a':'inherit'}">${fmt(m.bal)}</span></div>`;tip.style.opacity="1";});
+    bar.addEventListener("mousemove",e=>{const r=chart.getBoundingClientRect();tip.style.left=(e.clientX-r.left)+"px";tip.style.top=(e.clientY-r.top-12)+"px";});
+    bar.addEventListener("mouseleave",()=>tip.style.opacity="0");});
+}
+function renderGantt(c){
+  const wrap=$("#gantt"); if(!wrap)return; wrap.innerHTML="";
+  if(!ganttOpen||!c.months.length) return;
+  const data=c.months, sites=DATA.sites, d0=data[0].idx;
+  const W=Math.max(data.length*54+70,640),padL=56,padR=54,plotW=W-padL-padR,step=plotW/data.length;
+  const top=10,rowH=25,gridB=top+sites.length*rowH,H=gridB+22;
+  let grid=""; data.forEach((m,i)=>{const x=padL+step*i;grid+=`<line x1="${x.toFixed(1)}" y1="${top}" x2="${x.toFixed(1)}" y2="${gridB}" stroke="var(--line-2)"/>`;});
+  grid+=`<line x1="${(W-padR).toFixed(1)}" y1="${top}" x2="${(W-padR).toFixed(1)}" y2="${gridB}" stroke="var(--line-2)"/>`;
+  let band=""; if(focusIdx!=null&&sites[focusIdx]){const[a,b]=siteSpan(sites[focusIdx]);let p1=Math.max(0,a-d0),p2=Math.min(data.length,b-d0+1);if(p2>p1)band=`<rect x="${(padL+step*p1).toFixed(1)}" y="${top}" width="${(step*(p2-p1)).toFixed(1)}" height="${gridB-top}" fill="var(--accent)" opacity="0.10"/>`;}
+  let rows="";
+  sites.forEach((s,si)=>{
+    const y=top+si*rowH,[a,b]=siteSpan(s),real=s.kind==="real",foc=si===focusIdx,on=s.on;
+    const x1=padL+step*Math.max(0,a-d0),x2=padL+step*Math.min(data.length,b-d0+1);
+    const col=real?"var(--in)":"var(--pay)";
+    rows+=`<text x="${padL}" y="${(y+9).toFixed(1)}" font-size="11" font-weight="${foc?700:400}" fill="${on?'var(--ink)':'var(--faint)'}" font-family="Noto Sans JP">${s.name}${real?' ●':''}</text>`;
+    if(x2>x1){
+      rows+=`<rect class="gbar" data-si="${si}" x="${x1.toFixed(1)}" y="${(y+12).toFixed(1)}" width="${(x2-x1).toFixed(1)}" height="9" rx="3" fill="${col}" opacity="${on?(foc?1:0.85):0.35}" stroke="${foc?'var(--ink)':'none'}" stroke-width="${foc?1.5:0}"/>`;
+      rows+=`<text x="${(x2+4).toFixed(1)}" y="${(y+20).toFixed(1)}" font-size="8.5" fill="var(--faint)" font-family="JetBrains Mono">${Number(s.months)||6}ヶ月</text>`;
+    }
+  });
+  let labels=""; data.forEach((m,i)=>{const se=data.length>16?2:1;if(i%se===0){const x=padL+step*i+step/2;labels+=`<text x="${x.toFixed(1)}" y="${(gridB+14).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="JetBrains Mono">${m.label}</text>`;}});
+  wrap.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="工程ガントチャート" data-w="${W}" data-step="${step}" data-d0="${d0}">${band}${grid}${rows}${labels}</svg>`;
+}
+function renderSites(c){
+  const body=$("#sitesBody");body.innerHTML="";
+  DATA.sites.forEach((s,i)=>{
+    const tr=document.createElement("tr");if(!s.on)tr.className="off";
+    const costCell=s.kind==="real"?`<span class="num" style="font-weight:700">${man(siteCost(s))}</span>`:`<input class="cell-num" type="text" inputmode="numeric" value="${Math.round((Number(s.cost)||0)/10000)}" data-i="${i}" data-f="cost">`;
+    const profCell=s.kind==="real"?`<span style="color:var(--in);font-weight:700">実データ<span style="color:var(--faint);font-weight:400">·${s.months}ヶ月</span></span>`:`<select class="selp" data-i="${i}" data-f="prof">${Object.keys(PROF_LABEL).map(k=>`<option value="${k}" ${s.prof===k?"selected":""}>${PROF_LABEL[k]}</option>`).join("")}</select> <input class="cell-num" type="number" min="1" max="12" step="1" value="${s.months||6}" data-i="${i}" data-f="months" style="width:46px;display:inline-block"><span style="color:var(--faint);font-size:11px">ヶ月</span>`;
+    tr.dataset.si=i;
+    tr.innerHTML=`<td class="drag-handle" draggable="true" title="ドラッグして並び替え" style="cursor:grab;color:var(--faint);font-size:16px;text-align:center;padding:4px 2px;user-select:none">⠿</td>
+      <td><input type="checkbox" class="chk" ${s.on?"checked":""} data-i="${i}" data-f="on"></td>
+      <td class="l"><input class="cell-in" value="${s.name.replace(/"/g,'&quot;')}" data-i="${i}" data-f="name">${s.kind==="real"?'<span class="badge">実額</span>':''}</td>
+      <td class="num">${costCell}</td>
+      <td class="l mon"><input class="cell-mon" type="month" value="${s.ym}" data-i="${i}" data-f="ym"></td>
+      <td class="l">${profCell}</td>
+      <td class="num"><input class="cell-num" type="text" inputmode="numeric" value="${Math.round(siteNyu(s)/10000)}" data-i="${i}" data-f="contract" style="color:var(--in);font-weight:700"></td>
+      <td><button class="rm" data-i="${i}" data-act="sdel" title="削除">×</button></td>`;
+    body.appendChild(tr);
+  });
+  $("#sumCost").textContent=man(c.sumCost);$("#sumIn").textContent=man(c.sumIn);
+  $("#siteCount").textContent=`${c.active}現場（実データ${DATA.sites.filter(s=>s.on&&s.kind==="real").length}）`;
+}
+function renderNyu(){
+  const wrap=$("#nyuWrap");const openSet=new Set(Array.from(wrap.querySelectorAll(".nyu-site")).filter(d=>d.open).map(d=>d.dataset.si));
+  wrap.innerHTML="";
+  DATA.sites.forEach((s,i)=>{ if(!s.on)return;
+    const det=document.createElement("details");det.className="nyu-site";det.dataset.si=i;
+    if(openSet.has(String(i)))det.open=true; // 以前開いていたものだけ復元
+    const rows=(s.nyu||[]).map((x,j)=>`<div class="nyu-row">
+      <input class="lab" value="${(x.label||'').replace(/"/g,'&quot;')}" data-si="${i}" data-ni="${j}" data-nf="label" placeholder="回の名称">
+      <input class="n" type="text" inputmode="numeric" value="${Math.round((Number(x.amt)||0)/10000)}" data-si="${i}" data-ni="${j}" data-nf="amt">
+      <span class="off-wrap">着工から<input class="n" type="text" inputmode="numeric" value="${Number(x.off)||0}" data-si="${i}" data-ni="${j}" data-nf="off" style="width:46px">ヶ月後</span>
+      <button class="rm" data-si="${i}" data-ni="${j}" data-act="ndel" title="削除">×</button></div>`).join("");
+    det.innerHTML=`<summary><span class="nm">${s.name}${s.kind==="real"?'<span class="badge">実額</span>':''}</span><span class="tot">入金計 ${man(siteNyu(s))}万円${s.nyuManual?' ✎手入力':''}</span></summary>
+      <div class="nyu-body"><div class="nyu-head"><span>回</span><span>金額(万円)</span><span>タイミング</span><span></span></div>
+      ${rows||'<div class="hint" style="margin:4px 0 10px">入金がありません。「＋ 回を追加」で追加してください。</div>'}
+      <div class="nyu-foot"><button class="mini" data-si="${i}" data-act="nadd">＋ 回を追加</button><button class="mini" data-si="${i}" data-act="nreset">${s.kind==="real"?'均等配分に戻す':'40/30/30に戻す'}</button></div></div>`;
+    wrap.appendChild(det);
+  });
+  if(!wrap.children.length)wrap.innerHTML='<div class="hint">対象現場がありません</div>';
+}
+function drillHeads(s){const start=ymToIdx(s.ym)+DATA.shift;return Array.from({length:s.months},(_,i)=>idxToYm(start+i).label);}
+function renderDrill(){
+  const wrap=$("#drillWrap");const openSet=new Set(Array.from(wrap.querySelectorAll(".nyu-site")).filter(d=>d.open).map(d=>d.dataset.di));
+  wrap.innerHTML="";
+  const activeSites=DATA.sites.map((s,i)=>[s,i]).filter(([s])=>s.on);
+  activeSites.forEach(([s,si])=>{
+    const heads=drillHeads(s),cost=siteCost(s),contract=siteNyu(s);
+    const det=document.createElement("details");det.className="nyu-site";det.dataset.di=si;
+    if(openSet.has(String(si)))det.open=true; // 以前開いていたものだけ復元（自動展開なし）
+    if(s.kind==="real"){
+      const rows=s.trades.map((t,ti)=>`<tr><td class="l">${t.n}</td><td class="num tr-tot" data-di="${si}" data-ti="${ti}">${fmt(t.a)}</td>${t.m.map((v,mi)=>`<td><input class="dc ${v?'':'z'}" type="text" inputmode="numeric" value="${Math.round(v)}" data-di="${si}" data-ti="${ti}" data-mi="${mi}"></td>`).join("")}<td><button class="rm" data-di="${si}" data-ti="${ti}" data-act="tdel" title="削除">×</button></td></tr>`).join("");
+      const col=Array(s.months).fill(0);s.trades.forEach(t=>t.m.forEach((v,i)=>col[i]+=v));
+      det.innerHTML=`<summary><span class="nm">${s.name}<span class="badge">実額</span></span><span class="tot"><span class="dsum" data-di="${si}">原価 ${man(cost)}万 ／ 契約入金 ${man(contract)}万</span></span></summary>
+        <div class="nyu-body">
+          <div class="hint" style="margin-bottom:8px">工期 ${s.months}ヶ月（着工 ${idxToYm(ymToIdx(s.ym)).label}）・完工時の手元 ${man(contract-cost)}万円（入金−支払、預り消費税を含む）</div>
+          <div class="tbl-scroll"><table class="dtbl"><thead><tr><th class="l">工種</th><th>発注額</th>${heads.map(h=>`<th>${h}</th>`).join("")}<th></th></tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr><td class="l">月別 合計</td><td class="num df-cost" data-di="${si}">${fmt(cost)}</td>${col.map((v,mi)=>`<td class="num df" data-di="${si}" data-mi="${mi}">${fmt(v)}</td>`).join("")}<td></td></tr></tfoot></table></div>
+          <div class="nyu-foot"><button class="mini" data-di="${si}" data-act="tadd">＋ 工種を追加</button></div>
+        </div>`;
+    } else {
+      // 投影現場：支払プロファイルから自動計算した月別金額を表示（読み取り専用）
+      const weights=profArr(s.prof,s.months);
+      const monthly=weights.map(w=>Math.round(s.cost*w));
+      const profName=PROF_LABEL[s.prof]||s.prof;
+      det.innerHTML=`<summary><span class="nm">${s.name}<span class="badge" style="background:var(--accent-soft);color:var(--accent)">投影</span></span><span class="tot">発注額 ${man(s.cost)}万 ／ 契約入金 ${man(contract)}万</span></summary>
+        <div class="nyu-body">
+          <div class="hint" style="margin-bottom:8px">工期 ${s.months}ヶ月（着工 ${idxToYm(ymToIdx(s.ym)).label}）・支払プロファイル：${profName}・自動計算（月別金額は参考値）</div>
+          <div class="tbl-scroll"><table class="dtbl"><thead><tr><th class="l">内訳</th><th>発注額</th>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+            <tbody><tr><td class="l" style="color:var(--muted)">自動配分（${profName}）</td><td class="num">${fmt(s.cost)}</td>${monthly.map(v=>`<td class="num" style="color:var(--muted)">${fmt(v)}</td>`).join("")}</tr></tbody>
+            <tfoot><tr><td class="l">月別 合計</td><td class="num">${fmt(s.cost)}</td>${monthly.map(v=>`<td class="num">${fmt(v)}</td>`).join("")}</tr></tfoot></table></div>
+        </div>`;
+    }
+    wrap.appendChild(det);
+  });
+  if(!activeSites.length)wrap.innerHTML='<div class="hint">有効な現場がありません（チェックを入れてください）</div>';
+}
+function updateDrillSite(si){
+  const s=DATA.sites[si];const col=Array(s.months).fill(0);s.trades.forEach(t=>t.m.forEach((v,i)=>col[i]+=v));
+  document.querySelectorAll(`.tr-tot[data-di="${si}"]`).forEach(el=>{const ti=+el.dataset.ti;if(s.trades[ti])el.textContent=fmt(s.trades[ti].a);});
+  document.querySelectorAll(`.df[data-di="${si}"]`).forEach(el=>{el.textContent=fmt(col[+el.dataset.mi]||0);});
+  const dfc=document.querySelector(`.df-cost[data-di="${si}"]`);if(dfc)dfc.textContent=fmt(siteCost(s));
+  const ds=document.querySelector(`.dsum[data-di="${si}"]`);if(ds)ds.textContent=`原価 ${man(siteCost(s))}万 ／ 契約入金 ${man(siteNyu(s))}万`;
+}
+function renderMonths(c){
+  const body=$("#monBody");body.innerHTML="";
+  if(!c.months.length){body.innerHTML=`<tr><td class="l" colspan="6" style="text-align:center;color:var(--faint);padding:22px">対象現場がありません</td></tr>`;return;}
+  c.months.forEach(m=>{const short=m.bal<0,peak=m.pay===c.peakPay&&c.peakPay>0;let st="—",col="var(--faint)";
+    if(short){st="⚠ 資金ショート";col="var(--danger)";}else if(peak){st="◆ 支払ピーク";col="var(--warn)";}
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="l">${m.label}</td><td class="num">${fmt(m.pay)}</td><td class="num" style="color:var(--in)">${m.inc?fmt(m.inc):'·'}</td><td class="num" style="color:${m.net<0?'var(--danger)':'var(--in)'}">${m.net>=0?'+':''}${fmt(m.net)}</td><td class="num ${short?'warncell':''}" style="${short?'':'font-weight:700'}">${fmt(m.bal)}</td><td class="l" style="font-size:12px;color:${col}">${st}</td>`;
+    body.appendChild(tr);});
+}
+function syncLabels(){$("#cashLbl").textContent=oku(DATA.cash);$("#urLbl").textContent="×"+DATA.ur.toFixed(2);$("#shiftLbl").textContent=DATA.shift+"ヶ月";
+  const h=Number(DATA.horizon)||0; $("#horizonLbl").textContent=h>0?h+"ヶ月":"自動";
+  $("#cashRange").value=DATA.cash;$("#urRange").value=DATA.ur;$("#shiftRange").value=DATA.shift;
+  const cn=$("#cashNum"); if(cn&&document.activeElement!==cn) cn.value=Math.round(DATA.cash/10000);
+  const hn=$("#horizonNum"); if(hn&&document.activeElement!==hn) hn.value=h>0?h:"";}
+function render(){const c=compute();syncLabels();renderKPIs(c);renderChart(c);renderGantt(c);renderSites(c);renderNyu();renderDrill();renderMonths(c);}
+function renderLive(){const c=compute();syncLabels();renderKPIs(c);renderChart(c);renderGantt(c);renderSites(c);renderMonths(c);return c;}
+
+/* ---------- 保存状態 ---------- */
+function setStatus(){
+  const dot=$("#stDot"),tx=$("#stText"),btn=$("#saveBtn");
+  if(loading){dot.className="dot";tx.textContent="読み込み中…";btn.disabled=true;return;}
+  if(offline){dot.className="dot off";tx.textContent=CONFIGURED?"オフライン（保存できません）":"ローカルのみ（未設定）";btn.disabled=!CONFIGURED;return;}
+  if(saving){dot.className="dot dirty";tx.textContent="保存中…";btn.disabled=true;return;}
+  if(dirty){dot.className="dot dirty";tx.textContent="未保存の変更あり → 今すぐ保存を押してください";btn.disabled=false;}
+  else{dot.className="dot";tx.textContent="保存済み（全員に共有）";btn.disabled=true;}
+}
+function markDirty(){dirty=true;setStatus();scheduleCommit();updateHistBtns();}
+function scheduleAutosave(){ /* 自動保存なし — 今すぐ保存ボタンで手動保存 */ }
+/* ---------- 進む/戻る ---------- */
+function snap(){ return JSON.stringify(DATA); }
+function resetHistory(){ undoStack=[]; redoStack=[]; curSnap=snap(); clearTimeout(histT); updateHistBtns(); }
+function commitHistory(){ clearTimeout(histT); const s=snap(); if(s!==curSnap){ undoStack.push(curSnap); if(undoStack.length>60)undoStack.shift(); curSnap=s; redoStack=[]; updateHistBtns(); } }
+function scheduleCommit(){ clearTimeout(histT); histT=setTimeout(commitHistory,700); }
+function updateHistBtns(){ const u=$("#undoBtn"),r=$("#redoBtn"); if(u)u.disabled=undoStack.length===0&&snap()===curSnap; if(r)r.disabled=redoStack.length===0; }
+function undo(){ commitHistory(); if(!undoStack.length)return; redoStack.push(curSnap); curSnap=undoStack.pop(); DATA=JSON.parse(curSnap); render(); updateHistBtns(); dirty=true; setStatus(); scheduleAutosave(); }
+function redo(){ if(!redoStack.length)return; undoStack.push(curSnap); curSnap=redoStack.pop(); DATA=JSON.parse(curSnap); render(); updateHistBtns(); dirty=true; setStatus(); scheduleAutosave(); }
+let toastT;
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2600);}
+
+/* ---------- Supabase 連携 ---------- */
+const sbHeaders=()=>({ "apikey":SUPABASE_ANON, "Authorization":"Bearer "+SUPABASE_ANON, "Content-Type":"application/json" });
+async function sbLoad(){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}&select=data,updated_at`,{headers:sbHeaders(),cache:"no-store"});
+  if(!r.ok) throw new Error("load "+r.status);
+  const rows=await r.json();
+  return rows&&rows[0]?rows[0]:null;
+}
+async function sbSave(){
+  const now=new Date().toISOString();
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`,{method:"POST",
+    headers:{...sbHeaders(),"Prefer":"resolution=merge-duplicates,return=minimal"},
+    body:JSON.stringify([{id:ROW_ID,data:DATA,updated_at:now}])});
+  if(!r.ok) throw new Error("save "+r.status);
+  remoteUpdatedAt=now;
+}
+async function saveNow(){
+  if(saving)return;
+  if(!CONFIGURED){ toast("Supabase未設定のため保存できません"); return; }
+  clearTimeout(autosaveT);clearTimeout(autosaveMaxT);autosaveT=null;autosaveMaxT=null; saving=true; setStatus();
+  try{ await sbSave(); dirty=false; offline=false; saving=false; setStatus(); toast("保存しました（全員に共有）"); }
+  catch(e){ saving=false; offline=true; setStatus(); toast("保存に失敗（通信エラー）。変更は保持しています"); }
+}
+async function initLoad(){
+  if(!CONFIGURED){ loading=false; offline=true; showCfgBanner(); DATA=buildDefault(); render(); resetHistory(); setStatus(); startPoll(); return; }
+  try{
+    const row=await sbLoad();
+    if(row&&row.data&&row.data.sites&&row.data.sites.length){ DATA=migrateData(row.data); remoteUpdatedAt=row.updated_at; }
+    else { DATA=buildDefault(); await sbSave(); }   // 初回：既定データを書き込み
+    loading=false; offline=false; render(); resetHistory(); setStatus(); startPoll();
+  }catch(e){ loading=false; offline=true; DATA=buildDefault(); render(); resetHistory(); setStatus();
+    toast("クラウドに接続できません。ローカル表示中"); startPoll(); }
+}
+function startPoll(){ setInterval(async()=>{
+  if(!CONFIGURED||dirty||saving||document.hidden) return;
+  try{ const row=await sbLoad(); offline=false;
+    if(row&&row.updated_at&&row.updated_at!==remoteUpdatedAt&&row.data&&row.data.sites){
+      DATA=row.data; remoteUpdatedAt=row.updated_at; render(); resetHistory(); setStatus(); toast("最新の内容に更新しました");
+    } else setStatus();
+  }catch(e){ offline=true; setStatus(); }
+},15000); }
+function showCfgBanner(){
+  const b=$("#cfgBanner"); if(!b)return; b.style.display="block";
+  b.innerHTML=`<b>クラウド保存の設定が未完了です。</b> このファイル冒頭の <code>SUPABASE_ANON</code> に、既存アプリと同じ公開anonキーを貼り付けてGitHubにアップしてください。設定前は編集できますが保存・共有はされません。`;
+}
+
+/* ---------- スキーマ移行（バージョンアップ時に追記） ---------- */
+function migrateData(d){
+  // フィールドが増えた場合のデフォルト補完（古いデータとの互換）
+  if(d.horizon===undefined) d.horizon=0;
+  if(d.shift===undefined) d.shift=0;
+  if(d.ur===undefined) d.ur=1.2033;
+  d.sites=(d.sites||[]).map(s=>{
+    if(!s.on===undefined) s.on=true;
+    if(!s.nyu) s.nyu=[];
+    if(s.nyuManual===undefined) s.nyuManual=false;
+    if(s.kind==="proj"&&!s.prof) s.prof="naga";
+    if(s.kind==="proj"&&!s.months) s.months=6;
+    // 将来の移行ロジックはここに追記
+    return s;
+  });
+  return d;
+}
+
+/* ---------- エクスポート / インポート ---------- */
+function exportData(){
+  const blob=new Blob([JSON.stringify({_version:VERSION,_exported:new Date().toISOString(),...DATA},null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`souseshikin_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  toast("データをエクスポートしました");
+}
+async function importData(file){
+  try{
+    const text=await file.text();
+    const parsed=JSON.parse(text);
+    if(!parsed.sites||!Array.isArray(parsed.sites)) throw new Error("sites が見つかりません");
+    const {_version,_exported,...d}=parsed;
+    if(!confirm(`バックアップ（${_exported?_exported.slice(0,10):'不明'}）を読み込みます。現在のデータは上書きされます。よろしいですか？`)) return;
+    DATA=migrateData(d); markDirty(); render(); resetHistory();
+    toast(`インポート完了（${_exported?_exported.slice(0,10):''}）`);
+  }catch(e){ alert("インポートに失敗しました: "+e.message); }
+}
+
+/* ---------- Excel エクスポート ---------- */
+function exportXlsx(){
+  if(typeof XLSX==="undefined"){ alert("Excelライブラリの読み込み中です。少し待ってから再度お試しください。"); return; }
+  const wb=XLSX.utils.book_new();
+
+  // ① 現場一覧シート
+  const siteRows=[["現場名","種別","着工月","工期(月)","発注額(万)","契約金額(万)","有効"]];
+  DATA.sites.forEach(s=>{
+    siteRows.push([
+      s.name,
+      s.kind==="real"?"実額":"投影",
+      s.ym,
+      s.months||6,
+      Math.round(siteCost(s)/10000),
+      Math.round(siteNyu(s)/10000),
+      s.on?"○":"×"
+    ]);
+  });
+  const wsS=XLSX.utils.aoa_to_sheet(siteRows);
+  wsS["!cols"]=[{wch:20},{wch:6},{wch:10},{wch:8},{wch:12},{wch:12},{wch:6}];
+  XLSX.utils.book_append_sheet(wb,wsS,"現場一覧");
+
+  // ② 工種別支払シート（実額現場のみ）
+  const reals=DATA.sites.filter(s=>s.kind==="real"&&s.on);
+  if(reals.length>0){
+    // 全現場の月ヘッダを収集
+    const allMonths=new Set();
+    reals.forEach(s=>{ const st=ymToIdx(s.ym); for(let i=0;i<(s.months||6);i++) allMonths.add(st+i); });
+    const mArr=Array.from(allMonths).sort((a,b)=>a-b).map(idx=>idxToYm(idx).ym);
+    const tradeRows=[["現場名","工種",...mArr,"合計(万)"]];
+    reals.forEach(s=>{
+      const st=ymToIdx(s.ym);
+      s.trades.forEach(t=>{
+        const row=[s.name,t.n];
+        mArr.forEach(ym=>{
+          const off=ymToIdx(ym)-st;
+          row.push(off>=0&&off<t.m.length?Math.round(t.m[off]/10000):0);
+        });
+        row.push(Math.round(t.a/10000));
+        tradeRows.push(row);
+      });
+      // 合計行
+      const tot=["","【合計】"];
+      mArr.forEach(ym=>{ const off=ymToIdx(ym)-st; let sum=0; s.trades.forEach(t=>{if(off>=0&&off<t.m.length)sum+=t.m[off];}); tot.push(Math.round(sum/10000)); });
+      tot.push(Math.round(siteCost(s)/10000));
+      tradeRows.push(tot);
+      tradeRows.push([]); // 空行
+    });
+    const wsT=XLSX.utils.aoa_to_sheet(tradeRows);
+    wsT["!cols"]=[{wch:20},{wch:16},...mArr.map(()=>({wch:9})),{wch:10}];
+    XLSX.utils.book_append_sheet(wb,wsT,"工種別支払");
+  }
+
+  // ③ 入金スケジュールシート
+  const nyuRows=[["現場名","回","金額(万)","着工からの月数","備考"]];
+  DATA.sites.filter(s=>s.on).forEach(s=>{
+    (s.nyu||[]).forEach((x,i)=>{
+      nyuRows.push([s.name,x.label||`第${i+1}回`,Math.round(x.amt/10000),x.off||0,""]);
+    });
+  });
+  const wsN=XLSX.utils.aoa_to_sheet(nyuRows);
+  wsN["!cols"]=[{wch:20},{wch:8},{wch:10},{wch:14},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,wsN,"入金スケジュール");
+
+  XLSX.writeFile(wb,`創世資金繰り_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast("Excelエクスポート完了");
+}
+
+/* ---------- Excel インポート ---------- */
+async function importXlsx(file){
+  if(typeof XLSX==="undefined"){ alert("Excelライブラリの読み込み中です。"); return; }
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:"array"});
+
+    // 現場一覧シートを読む
+    const wsS=wb.Sheets["現場一覧"];
+    if(!wsS){ alert("「現場一覧」シートが見つかりません。\nExcelエクスポートで出力したファイルを使用してください。"); return; }
+    const siteData=XLSX.utils.sheet_to_json(wsS,{header:1});
+    if(siteData.length<2){ alert("現場一覧にデータがありません。"); return; }
+
+    // 工種別支払シート
+    const wsT=wb.Sheets["工種別支払"];
+    const tradeData=wsT?XLSX.utils.sheet_to_json(wsT,{header:1}):[];
+
+    // 入金スケジュールシート
+    const wsN=wb.Sheets["入金スケジュール"];
+    const nyuData=wsN?XLSX.utils.sheet_to_json(wsN,{header:1}):[];
+
+    // 現場一覧パース（ヘッダ行スキップ）
+    let addCount=0, updateCount=0;
+    for(let r=1;r<siteData.length;r++){
+      const row=siteData[r];
+      if(!row||!row[0])continue;
+      const name=String(row[0]||"").trim();
+      const kind=String(row[1]||"投影").trim()==="実額"?"real":"proj";
+      const ym=String(row[2]||"2026-08").trim();
+      const months=Math.max(1,Math.min(24,Math.round(Number(row[3])||6)));
+      const costMan=Number(row[4])||0;
+      const nyuMan=Number(row[5])||0;
+      const on=String(row[6]||"○").trim()!=="×";
+
+      // 既存現場を名前で検索
+      const idx=DATA.sites.findIndex(s=>s.name===name);
+      if(idx>=0){
+        // 更新
+        const s=DATA.sites[idx];
+        s.ym=ym; s.months=months; s.on=on;
+        if(kind==="proj"){ s.kind="proj"; s.cost=costMan*10000; }
+        updateCount++;
+      } else {
+        // 新規追加
+        const s={kind,on,name,ym,months,nyuManual:false};
+        if(kind==="proj"){ s.cost=costMan*10000; s.prof="naga"; s.nyu=defaultNyu(s.cost,DATA.ur); }
+        else { s.trades=[]; s.nyu=defaultNyu(nyuMan*10000,DATA.ur); }
+        DATA.sites.push(s);
+        addCount++;
+      }
+    }
+
+    // 工種別支払パース（実額現場）
+    if(tradeData.length>1){
+      const header=tradeData[0];
+      // ヘッダから月列を特定（YYYY-MM形式）
+      const mCols=[];
+      for(let c=2;c<header.length-1;c++){
+        const h=String(header[c]||"");
+        if(/^\d{4}-\d{2}$/.test(h)) mCols.push({col:c,ym:h});
+      }
+      let curSite=null;
+      for(let r=1;r<tradeData.length;r++){
+        const row=tradeData[r];
+        if(!row||row.length<2)continue;
+        const n0=String(row[0]||"").trim(),n1=String(row[1]||"").trim();
+        if(!n0&&!n1)continue;
+        if(n0){ const s=DATA.sites.find(s=>s.name===n0); if(s&&s.kind==="real"){ curSite=s; if(!s.trades)s.trades=[]; } else curSite=null; }
+        if(!curSite||!n1||n1.startsWith("【"))continue;
+        // 月データ
+        const mArr=Array(curSite.months).fill(0);
+        mCols.forEach(({col,ym})=>{
+          const off=ymToIdx(ym)-ymToIdx(curSite.ym);
+          if(off>=0&&off<curSite.months) mArr[off]=Math.round((Number(row[col])||0)*10000);
+        });
+        const a=mArr.reduce((x,y)=>x+y,0);
+        // 既存工種を更新、なければ追加
+        const ti=curSite.trades.findIndex(t=>t.n===n1);
+        if(ti>=0){ curSite.trades[ti].m=mArr; curSite.trades[ti].a=a; }
+        else { curSite.trades.push({n:n1,m:mArr,a}); }
+      }
+      // 工種をパース後に入金を自動更新
+      DATA.sites.filter(s=>s.kind==="real"&&!s.nyuManual).forEach(s=>autoNyu(s));
+    }
+
+    // 入金スケジュールパース
+    if(nyuData.length>1){
+      // 現場ごとに入金をリセットして再構築
+      const nyuMap={};
+      for(let r=1;r<nyuData.length;r++){
+        const row=nyuData[r]; if(!row||!row[0])continue;
+        const name=String(row[0]||"").trim();
+        if(!nyuMap[name])nyuMap[name]=[];
+        nyuMap[name].push({label:String(row[1]||""),amt:Math.round((Number(row[2])||0)*10000),off:Math.round(Number(row[3])||0)});
+      }
+      Object.entries(nyuMap).forEach(([name,entries])=>{
+        const s=DATA.sites.find(s=>s.name===name);
+        if(s&&entries.length>0){ s.nyu=entries; s.nyuManual=true; }
+      });
+    }
+
+    markDirty(); render(); resetHistory();
+    toast(`Excelインポート完了：新規${addCount}件追加、${updateCount}件更新`);
+    alert(`インポート完了！\n新規追加：${addCount}現場\n更新：${updateCount}現場`);
+  }catch(e){ alert("インポートエラー："+e.message); }
+}
+
+/* ---------- PDF 出力（印刷ダイアログ） ---------- */
+function exportPdf(){
+  window.print();
+}
+
+/* ---------- バージョン表示 ---------- */
+(function(){const el=$("#verBadge");if(el)el.textContent=VERSION;})();
+
+/* ---------- イベント ---------- */
+const pn=s=>Number(String(s).replace(/[，,、　\s]/g,"").replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)))||0;
+document.addEventListener("input",e=>{
+  const t=e.target,d=t.dataset||{};
+  if(t.id==="cashRange"){DATA.cash=+t.value;markDirty();render();}
+  else if(t.id==="cashNum"){DATA.cash=Math.max(0,pn(t.value)*10000);markDirty();renderLive();}
+  else if(t.id==="urRange"){DATA.ur=+t.value;DATA.sites.forEach(autoNyu);markDirty();render();}
+  else if(t.id==="shiftRange"){DATA.shift=+t.value;markDirty();render();}
+  else if(t.id==="horizonNum"){const v=pn(t.value);DATA.horizon=(v<=0)?0:Math.min(v,240);markDirty();render();}
+  else if(d.mi!==undefined){ // 工種別 月額セル
+    const s=DATA.sites[+d.di],tr=s.trades[+d.ti]; if(!tr)return;
+    tr.m[+d.mi]=pn(t.value); tr.a=tr.m.reduce((x,y)=>x+y,0);
+    autoNyu(s); markDirty(); renderLive(); updateDrillSite(+d.di);
+  }
+  else if(d.nf!==undefined){ // 入金
+    const s=DATA.sites[+d.si],x=s.nyu[+d.ni]; if(!x)return;
+    if(d.nf==="amt")x.amt=pn(t.value)*10000; else if(d.nf==="off")x.off=Math.max(0,Math.round(pn(t.value))); else x.label=t.value;
+    s.nyuManual=true;markDirty();renderLive();
+    const tot=document.querySelector(`.nyu-site[data-si="${d.si}"] .tot`); if(tot)tot.textContent=`入金計 ${man(siteNyu(s))}万円 ✎手入力`;
+  }
+  else if(d.f!==undefined){ // 現場一覧
+    const s=DATA.sites[+d.i];
+    if(d.f==="on"){s.on=t.checked;markDirty();render();}
+    else if(d.f==="prof"){s.prof=t.value;markDirty();render();}
+    else if(d.f==="months"){s.months=Math.max(1,Math.min(12,Math.round(pn(t.value)||6)));markDirty();render();}
+    // name / cost / contract / ym はタイプ中はrender不要（フォーカス維持）→ blurで再描画
+    else if(d.f==="cost"){s.cost=pn(t.value)*10000;autoNyu(s);markDirty();}
+    else if(d.f==="contract"){setContract(s,pn(t.value)*10000);markDirty();}
+    else{s[d.f]=t.value;markDirty();}
+  }
+});
+document.addEventListener("click",e=>{
+  const t=e.target,d=t.dataset||{},act=d.act;
+  if(act==="sdel"){DATA.sites.splice(+d.i,1);markDirty();render();}
+  else if(act==="nadd"){const s=DATA.sites[+d.si];s.nyu.push({label:`第${s.nyu.length+1}回`,amt:0,off:Math.min(6,s.nyu.length*2)});s.nyuManual=true;markDirty();render();}
+  else if(act==="ndel"){const s=DATA.sites[+d.si];s.nyu.splice(+d.ni,1);s.nyuManual=true;markDirty();render();}
+  else if(act==="nreset"){const s=DATA.sites[+d.si];s.nyuManual=false;autoNyu(s);markDirty();render();}
+  else if(act==="tdel"){const s=DATA.sites[+d.di];s.trades.splice(+d.ti,1);autoNyu(s);markDirty();render();}
+  else if(act==="tadd"){const s=DATA.sites[+d.di];s.trades.push({n:"新規工種",m:Array(s.months).fill(0),a:0});markDirty();render();}
+  else if(t.id==="addBtn"){const last=DATA.sites[DATA.sites.length-1];const ym=last?idxToYm(ymToIdx(last.ym)+1).ym:"2026-08";
+    const s={kind:"proj",on:true,name:`新規現場 ${DATA.sites.length+1}`,cost:80000000,ym,prof:"naga",months:6,nyuManual:false};s.nyu=defaultNyu(s.cost,DATA.ur);DATA.sites.push(s);markDirty();render();}
+  else if(t.id==="resetBtn"){ if(confirm("初期データ（長町・多賀城＋投影）に戻します。よろしいですか？")){DATA=buildDefault();markDirty();render();} }
+  else if(t.closest&&t.closest(".leg")){ const el=t.closest(".leg"),k=el.dataset.ser; show[k]=!show[k]; el.classList.toggle("legoff",!show[k]); renderChart(compute()); }
+  else if(t.classList.contains("gbar")){ if(suppressClick){suppressClick=false;return;} const si=+t.dataset.si; focusIdx=(focusIdx===si?null:si); const c=compute(); renderChart(c); renderGantt(c); }
+  else if(t.id==="ganttToggle"){ ganttOpen=!ganttOpen; $("#ganttToggle").textContent=ganttOpen?"工程を隠す":"工程を表示"; $("#ganttHint").style.display=ganttOpen?"":"none"; const c=compute(); renderGantt(c); }
+  else if(t.id==="undoBtn"){undo();}
+  else if(t.id==="redoBtn"){redo();}
+  else if(t.id==="saveBtn"){saveNow();}
+  else if(t.id==="revertBtn"){ if(dirty&&!confirm("未保存の変更を破棄して、クラウドの最新に更新します。よろしいですか？"))return; refreshFromRemote(); }
+  else if(t.id==="exportBtn"){ exportData(); }
+  else if(t.id==="xlsxExportBtn"){ exportXlsx(); }
+  else if(t.id==="pdfExportBtn"){ exportPdf(); }
+  else if(t.id==="themeBtn"){const r=document.documentElement,cur=r.getAttribute("data-theme");const isDark=cur==="dark"||(!cur&&matchMedia("(prefers-color-scheme:dark)").matches);r.setAttribute("data-theme",isDark?"light":"dark");render();}
+});
+async function refreshFromRemote(){
+  if(!CONFIGURED){ DATA=buildDefault(); dirty=false; render(); resetHistory(); setStatus(); return; }
+  try{ const row=await sbLoad(); if(row&&row.data&&row.data.sites){DATA=row.data;remoteUpdatedAt=row.updated_at;} dirty=false; offline=false; render(); resetHistory(); setStatus(); toast("最新に更新しました"); }
+  catch(e){ offline=true; setStatus(); toast("更新に失敗（通信エラー）"); }
+}
+/* ---------- ガントバーのドラッグで着工月を移動 ---------- */
+document.addEventListener("pointerdown",e=>{
+  const t=e.target; if(!t.classList||!t.classList.contains("gbar"))return;
+  dragG={si:+t.dataset.si, x0:e.clientX, origIdx:ymToIdx(DATA.sites[+t.dataset.si].ym), delta:0, moved:false};
+});
+document.addEventListener("pointermove",e=>{
+  if(!dragG)return; const svg=$("#gantt svg"); if(!svg)return;
+  const rect=svg.getBoundingClientRect(); const monthPx=((+svg.dataset.step)*(rect.width/(+svg.dataset.w)))||1;
+  if(Math.abs(e.clientX-dragG.x0)>4) dragG.moved=true;
+  const d=Math.round((e.clientX-dragG.x0)/monthPx);
+  if(d!==dragG.delta){ dragG.delta=d; const s=DATA.sites[dragG.si]; s.ym=idxToYm(dragG.origIdx+d).ym; focusIdx=dragG.si; const c=compute(); renderChart(c); renderGantt(c); }
+});
+document.addEventListener("pointerup",()=>{
+  if(!dragG)return; const moved=dragG.moved||dragG.delta!==0; dragG=null;
+  if(moved){ suppressClick=true; markDirty(); render(); }
+});
+document.addEventListener("keydown",e=>{
+  const k=(e.key||"").toLowerCase(); const mod=e.ctrlKey||e.metaKey;
+  if(mod&&!e.shiftKey&&k==="z"){ e.preventDefault(); undo(); }
+  else if(mod&&(k==="y"||(e.shiftKey&&k==="z"))){ e.preventDefault(); redo(); }
+});
+window.addEventListener("beforeunload",e=>{ if(dirty&&!saving){e.preventDefault();e.returnValue="";} });
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",render);
+document.getElementById("importFile").addEventListener("change",e=>{ const f=e.target.files[0]; if(f)importData(f); e.target.value=""; });
+document.getElementById("xlsxImportFile").addEventListener("change",e=>{ const f=e.target.files[0]; if(f)importXlsx(f); e.target.value=""; });
+
+/* ---------- フォーカスが外れたら再描画（name/cost/contract/ym の確定処理） ---------- */
+document.addEventListener("blur",e=>{
+  const t=e.target,d=t.dataset||{};
+  if(d.f==="name"||d.f==="cost"||d.f==="contract"||d.f==="ym"){render();}
+},true);
+
+/* ---------- 現場一覧 ドラッグ並び替え ---------- */
+let dragSiteIdx=null;
+document.addEventListener("dragstart",e=>{
+  if(!e.target.closest(".drag-handle"))return; // ⠿ ハンドルからのみドラッグ開始
+  const tr=e.target.closest("#sitesBody tr");
+  if(!tr)return;
+  dragSiteIdx=+tr.dataset.si;
+  e.dataTransfer.effectAllowed="move";
+  setTimeout(()=>tr.style.opacity="0.4",0);
+});
+document.addEventListener("dragend",e=>{
+  const tr=e.target.closest("#sitesBody tr");
+  if(tr)tr.style.opacity="";
+  dragSiteIdx=null;
+  document.querySelectorAll("#sitesBody tr").forEach(r=>r.style.borderTop="");
+});
+document.addEventListener("dragover",e=>{
+  const tr=e.target.closest("#sitesBody tr");
+  if(!tr||dragSiteIdx===null)return;
+  e.preventDefault(); e.dataTransfer.dropEffect="move";
+  document.querySelectorAll("#sitesBody tr").forEach(r=>r.style.borderTop="");
+  tr.style.borderTop="2px solid var(--accent)";
+});
+document.addEventListener("drop",e=>{
+  const tr=e.target.closest("#sitesBody tr");
+  if(!tr||dragSiteIdx===null)return;
+  e.preventDefault();
+  const toIdx=+tr.dataset.si;
+  if(toIdx===dragSiteIdx)return;
+  const moved=DATA.sites.splice(dragSiteIdx,1)[0];
+  DATA.sites.splice(toIdx,0,moved);
+  markDirty(); render();
+});
+
+setStatus(); initLoad();
+</script>
