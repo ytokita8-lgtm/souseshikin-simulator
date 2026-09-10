@@ -78,6 +78,8 @@ svg{display:block; width:100%; height:auto}
 .tip{position:absolute; pointer-events:none; background:var(--ink); color:var(--ground); border-radius:9px; padding:9px 11px; font-size:12px; line-height:1.55; box-shadow:0 8px 24px rgba(0,0,0,.28); opacity:0; transition:opacity .12s; z-index:5; max-width:250px; transform:translate(-50%,-100%)}
 .tip b{color:var(--surface)} .tip .r{display:flex; justify-content:space-between; gap:14px} .tip .r span:last-child{font-family:"JetBrains Mono",monospace}
 .tbl-scroll{overflow-x:auto}
+.tbl-top-scroll{overflow-x:auto;overflow-y:hidden;height:14px;margin-bottom:2px;cursor:col-resize}
+.tbl-top-scroll-inner{height:1px}
 table{border-collapse:collapse; width:100%; font-size:13px}
 th,td{padding:9px 10px; text-align:right; border-bottom:1px solid var(--line-2); white-space:nowrap}
 th{color:var(--muted); font-weight:600; font-size:11.5px; letter-spacing:.03em}
@@ -511,8 +513,9 @@ function renderDrill(){
       const col=Array(s.months).fill(0);s.trades.forEach(t=>t.m.forEach((v,i)=>col[i]+=v));
       det.innerHTML=`<summary><span class="nm">${s.name}<span class="badge">実額</span></span><span class="tot"><span class="dsum" data-di="${si}">原価 ${man(cost)}万 ／ 契約入金 ${man(contract)}万</span></span></summary>
         <div class="nyu-body">
-          <div class="hint" style="margin-bottom:8px">工期 ${s.months}ヶ月（着工 ${idxToYm(ymToIdx(s.ym)).label}）・完工時の手元 ${man(contract-cost)}万円（入金−支払、預り消費税を含む）</div>
-          <div class="tbl-scroll"><table class="dtbl"><thead><tr><th class="l">工種</th><th>発注額</th>${heads.map(h=>`<th>${h}</th>`).join("")}<th></th></tr></thead>
+          <div class="hint" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>工期 <b style="color:var(--ink)">${s.months}ヶ月</b>（着工 ${idxToYm(ymToIdx(s.ym)).label}）・完工時の手元 ${man(contract-cost)}万円（入金−支払、預り消費税を含む）</span><span style="display:flex;gap:4px;align-items:center;flex-wrap:wrap"><button class="mini" data-di="${si}" data-act="mred" title="工期を1ヶ月短縮">−1ヶ月</button><button class="mini" data-di="${si}" data-act="mext" title="工期を1ヶ月延長">＋1ヶ月</button><span style="display:flex;align-items:center;gap:3px;margin-left:4px"><input class="cell-num" type="number" min="1" max="24" step="1" value="${s.months}" data-di="${si}" data-act_ref="mresize" style="width:48px;display:inline-block;padding:3px 5px;font-size:12px" title="新しい工期（ヶ月）">ヶ月に<button class="mini" data-di="${si}" data-act="mresize" style="background:var(--accent-soft);color:var(--accent);font-weight:700" title="支払金額を新しい工期に比例配分で自動再配分">一括再配分</button></span></span></div>
+          <div class="tbl-top-scroll" id="dtop-${si}"><div class="tbl-top-scroll-inner" id="dtopin-${si}"></div></div>
+          <div class="tbl-scroll" id="dmain-${si}"><table class="dtbl"><thead><tr><th class="l">工種</th><th>発注額</th>${heads.map(h=>`<th>${h}</th>`).join("")}<th></th></tr></thead>
             <tbody>${rows}</tbody>
             <tfoot><tr><td class="l">月別 合計</td><td class="num df-cost" data-di="${si}">${fmt(cost)}</td>${col.map((v,mi)=>`<td class="num df" data-di="${si}" data-mi="${mi}">${fmt(v)}</td>`).join("")}<td></td></tr></tfoot></table></div>
           <div class="nyu-foot"><button class="mini" data-di="${si}" data-act="tadd">＋ 工種を追加</button></div>
@@ -555,7 +558,20 @@ function syncLabels(){$("#cashLbl").textContent=oku(DATA.cash);$("#urLbl").textC
   $("#cashRange").value=DATA.cash;$("#urRange").value=DATA.ur;$("#shiftRange").value=DATA.shift;
   const cn=$("#cashNum"); if(cn&&document.activeElement!==cn) cn.value=Math.round(DATA.cash/10000);
   const hn=$("#horizonNum"); if(hn&&document.activeElement!==hn) hn.value=h>0?h:"";}
-function render(){const c=compute();syncLabels();renderKPIs(c);renderChart(c);renderGantt(c);renderSites(c);renderNyu();renderDrill();renderMonths(c);}
+function syncTopScrollbars(){
+  DATA.sites.forEach((_,si)=>{
+    const top=document.getElementById(`dtop-${si}`);
+    const main=document.getElementById(`dmain-${si}`);
+    if(!top||!main)return;
+    const table=main.querySelector('table');
+    if(!table)return;
+    const inner=document.getElementById(`dtopin-${si}`);
+    if(inner) inner.style.width=table.scrollWidth+'px';
+    top.onscroll=()=>{ if(main.scrollLeft!==top.scrollLeft) main.scrollLeft=top.scrollLeft; };
+    main.onscroll=()=>{ if(top.scrollLeft!==main.scrollLeft) top.scrollLeft=main.scrollLeft; };
+  });
+}
+function render(){const c=compute();syncLabels();renderKPIs(c);renderChart(c);renderGantt(c);renderSites(c);renderNyu();renderDrill();syncTopScrollbars();renderMonths(c);}
 function renderLive(){const c=compute();syncLabels();renderKPIs(c);renderChart(c);renderGantt(c);renderSites(c);renderMonths(c);return c;}
 
 /* ---------- 保存状態 ---------- */
@@ -885,6 +901,29 @@ document.addEventListener("click",e=>{
   else if(act==="nreset"){const s=DATA.sites[+d.si];s.nyuManual=false;autoNyu(s);markDirty();render();}
   else if(act==="tdel"){const s=DATA.sites[+d.di];s.trades.splice(+d.ti,1);autoNyu(s);markDirty();render();}
   else if(act==="tadd"){const s=DATA.sites[+d.di];s.trades.push({n:"新規工種",m:Array(s.months).fill(0),a:0});markDirty();render();}
+  else if(act==="mext"){const s=DATA.sites[+d.di];s.months++;s.trades.forEach(t=>{t.m.push(0);});markDirty();render();}
+  else if(act==="mred"){const s=DATA.sites[+d.di];if(s.months<=1)return;const lastHasVal=s.trades.some(t=>t.m[s.months-1]>0);if(lastHasVal&&!confirm(`最終月に金額が入っています。削除してよいですか？`))return;s.months--;s.trades.forEach(t=>{t.m.splice(s.months);t.a=t.m.reduce((x,y)=>x+y,0);});autoNyu(s);markDirty();render();}
+  else if(act==="mresize"){
+    const s=DATA.sites[+d.di];
+    const inp=t.previousElementSibling||t.parentElement.querySelector(`input[data-act_ref="mresize"][data-di="${d.di}"]`);
+    const n=Math.max(1,Math.min(24,Math.round(+(inp?inp.value:s.months))));
+    // 実際にデータが入っている最後の月を検出（+1ヶ月で広げた空列は無視）
+    let dataLen=0;
+    s.trades.forEach(tr=>{ tr.m.forEach((v,i)=>{ if(v>0) dataLen=Math.max(dataLen,i+1); }); });
+    if(!dataLen) dataLen=s.months;
+    if(!confirm(`データ ${dataLen}ヶ月分 → ${n}ヶ月 に比例配分で自動再配分します。よろしいですか？`))return;
+    s.trades.forEach(tr=>{
+      const newM=Array(n).fill(0);
+      const src=tr.m.slice(0,dataLen); // 実データ範囲のみ参照
+      src.forEach((v,i)=>{
+        if(!v)return;
+        const ni=Math.min(n-1,Math.round(i*(n-1)/Math.max(dataLen-1,1)));
+        newM[ni]+=v;
+      });
+      tr.m=newM; tr.a=newM.reduce((x,y)=>x+y,0);
+    });
+    s.months=n; autoNyu(s); markDirty(); render();
+  }
   else if(t.id==="addBtn"){const last=DATA.sites[DATA.sites.length-1];const ym=last?idxToYm(ymToIdx(last.ym)+1).ym:"2026-08";
     const s={kind:"proj",on:true,name:`新規現場 ${DATA.sites.length+1}`,cost:80000000,ym,prof:"naga",months:6,nyuManual:false};s.nyu=defaultNyu(s.cost,DATA.ur);DATA.sites.push(s);markDirty();render();}
   else if(t.id==="resetBtn"){ if(confirm("初期データ（長町・多賀城＋投影）に戻します。よろしいですか？")){DATA=buildDefault();markDirty();render();} }
